@@ -196,7 +196,7 @@ server {
 
         proxy_no_cache 1;
 
-        # internal proxy to auth-server running on port 3000, responses expected from proxy:
+        # responses expected from proxy:
         #   2xx response = access allowed via auth_request
         #   401 or 403 response = access denied via auth_request
         #   anything else = error
