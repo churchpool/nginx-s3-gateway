@@ -28,7 +28,7 @@ jobs:
         token: ${{secrets.GITHUB_TOKEN}}
 
     - name: Build the Docker image
-      run: docker build . --file Dockerfile --tag docker.pkg.github.com/churchpool/nginx-bucket-proxy-${{ steps.vars.outputs.short_ref }}:0.1.$BUILD_NUMBER
+      run: docker build . --file Dockerfile.oss --tag docker.pkg.github.com/churchpool/nginx-bucket-proxy-${{ steps.vars.outputs.short_ref }}:0.1.$BUILD_NUMBER
 
     - name: Log into registry
       run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login docker.pkg.github.com -u ${{ github.actor }} --password-stdin
