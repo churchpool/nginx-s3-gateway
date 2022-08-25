@@ -1,88 +1,46 @@
-name: CI
+name: Docker Image CI
 
-# Controls when the action will run. Triggers the workflow on push or pull request
-# events but only for the master branch
 on:
   push:
-    branches: [ master ]
-  pull_request:
-    branches: [ master ]
+    branches: [ deploy ]
 
-# A workflow run is made up of one or more jobs that can run sequentially or in parallel
 jobs:
+
   build:
+
     runs-on: ubuntu-latest
 
-    if: github.ref != 'refs/heads/master'
+    outputs:
+      short_ref: ${{ steps.vars.outputs.short_ref }}
+      build_number: ${{ steps.buildnumber.outputs.build_number }}
+
     steps:
-      # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
-      - uses: actions/checkout@v2
+    - uses: actions/checkout@v2
 
-      - name: Install dependencies
-        run: sudo apt-get install -y wait-for-it
-      - name: Run tests - latest njs version
-        run: ./test.sh latest-njs-oss
-      - name: Run tests - stable njs version
-        run: ./test.sh oss
+    - name: Get branch name
+      id: vars
+      run: echo ::set-output name=short_ref::${GITHUB_REF#refs/*/}
 
-  build_and_deploy:
-    runs-on: ubuntu-latest
+    - name: Generate build number
+      id: buildnumber
+      uses: einaregilsson/build-number@v3
+      with:
+        token: ${{secrets.GITHUB_TOKEN}}
 
-    if: github.ref == 'refs/heads/master'
-    steps:
-      # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
-      - uses: actions/checkout@v2
+    - name: Build the Docker image
+      run: docker build . --file Dockerfile --tag docker.pkg.github.com/churchpool/nginx-bucket-proxy-${{ steps.vars.outputs.short_ref }}:0.1.$BUILD_NUMBER
 
-      - name: Get current date
-        id: date
-        run: echo "::set-output name=date::$(date +'%Y%m%d')"
-      - name: Configure Github Package Registry
-        run: echo ${{ secrets.GITHUB_TOKEN }} | docker login docker.pkg.github.com -u $GITHUB_ACTOR --password-stdin
-      - name: Install dependencies
-        run: sudo apt-get install -y wait-for-it
-      - name: Run tests - latest njs version
-        run: ./test.sh latest-njs-oss
-      - name: Run tests - stable njs version
-        run: ./test.sh oss
-      # latest-njs-oss image push [Github]
-      - name: Tag container image for Push to github [latest-njs-oss date]
-        run: docker tag nginx-s3-gateway:latest-njs-oss docker.pkg.github.com/$GITHUB_REPOSITORY/nginx-oss-s3-gateway:latest-njs-oss-${{ steps.date.outputs.date }}
-      - name: Tag container image for Push to github [latest-njs-oss]
-        run: docker tag nginx-s3-gateway:latest-njs-oss docker.pkg.github.com/$GITHUB_REPOSITORY/nginx-oss-s3-gateway:latest-njs-oss
-      - name: Push container image to github [latest-njs-oss date]
-        run: docker push docker.pkg.github.com/$GITHUB_REPOSITORY/nginx-oss-s3-gateway:latest-njs-oss-${{ steps.date.outputs.date }}
-      - name: Push container image to github [latest-njs-oss]
-        run: docker push docker.pkg.github.com/$GITHUB_REPOSITORY/nginx-oss-s3-gateway:latest-njs-oss
-      # oss image push [Github]
-      - name: Tag container image for Push to github [oss date]
-        run: docker tag nginx-s3-gateway:latest docker.pkg.github.com/$GITHUB_REPOSITORY/nginx-oss-s3-gateway:latest-${{ steps.date.outputs.date }}
-      - name: Tag container image for Push to github [oss]
-        run: docker tag nginx-s3-gateway:latest docker.pkg.github.com/$GITHUB_REPOSITORY/nginx-oss-s3-gateway:latest
-      - name: Push container image to github [oss date]
-        run: docker push docker.pkg.github.com/$GITHUB_REPOSITORY/nginx-oss-s3-gateway:latest-${{ steps.date.outputs.date }}
-      - name: Push container image to github [oss latest]
-        run: docker push docker.pkg.github.com/$GITHUB_REPOSITORY/nginx-oss-s3-gateway:latest
-      # Login to Docker Hub
-      - name: Login to Docker Hub
-        uses: docker/login-action@v1
-        with:
-          username: ${{ secrets.DOCKER_HUB_USERNAME }}
-          password: ${{ secrets.DOCKER_HUB_ACCESS_TOKEN }}
-      # latest-njs-oss image push [Docker Hub]
-      - name: Tag container image for Push to Docker Hub [latest-njs-oss date]
-        run: docker tag nginx-s3-gateway:latest-njs-oss nginxinc/nginx-s3-gateway:latest-njs-oss-${{ steps.date.outputs.date }}
-      - name: Tag container image for Push to Docker Hub [latest-njs-oss]
-        run: docker tag nginx-s3-gateway:latest-njs-oss nginxinc/nginx-s3-gateway:latest-njs-oss
-      - name: Push container image to Docker Hub [latest-njs-oss date]
-        run: docker push nginxinc/nginx-s3-gateway:latest-njs-oss-${{ steps.date.outputs.date }}
-      - name: Push container image to Docker Hub [latest-njs-oss]
-        run: docker push nginxinc/nginx-s3-gateway:latest-njs-oss
-      # oss image push [Docker Hub]
-      - name: Tag container image for Push to Docker Hub [oss date]
-        run: docker tag nginx-s3-gateway:latest nginxinc/nginx-s3-gateway:latest-${{ steps.date.outputs.date }}
-      - name: Tag container image for Push to Docker Hub [oss]
-        run: docker tag nginx-s3-gateway:latest nginxinc/nginx-s3-gateway:latest
-      - name: Push container image to Docker Hub [oss date]
-        run: docker push nginxinc/nginx-s3-gateway:latest-${{ steps.date.outputs.date }}
-      - name: Push container image to Docker Hub [oss latest]
-        run: docker push nginxinc/nginx-s3-gateway:latest
+    - name: Log into registry
+      run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login docker.pkg.github.com -u ${{ github.actor }} --password-stdin
+
+    - name: Push Docker image to Github package registry
+      run: docker push docker.pkg.github.com/churchpool/nginx-bucket-proxy-${{ steps.vars.outputs.short_ref }}:0.1.$BUILD_NUMBER
+
+    - name: Login to OTC
+      run: docker login -u eu-de@${{ secrets.OTC_ACCESS_KEY}} -p ${{ secrets.OTC_LOGIN_KEY}} swr.eu-de.otc.t-systems.com
+
+    - name: Tag Docker image
+      run: docker tag docker.pkg.github.com/churchpool/nginx-bucket-proxy-${{ steps.vars.outputs.short_ref }}:0.1.$BUILD_NUMBER swr.eu-de.otc.t-systems.com/churchpool-api/nginx-bucket-proxy-${{ steps.vars.outputs.short_ref }}:0.1.$BUILD_NUMBER
+
+    - name: Push Docker image to OTC
+      run: docker push swr.eu-de.otc.t-systems.com/churchpool-api/nginx-bucket-proxy-${{ steps.vars.outputs.short_ref }}:0.1.$BUILD_NUMBER
