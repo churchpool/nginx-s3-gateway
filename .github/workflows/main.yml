@@ -28,19 +28,19 @@ jobs:
         token: ${{secrets.GITHUB_TOKEN}}
 
     - name: Build the Docker image
-      run: docker build . --file Dockerfile.oss --tag docker.pkg.github.com/churchpool/nginx-bucket-proxy-${{ steps.vars.outputs.short_ref }}:0.1.$BUILD_NUMBER
+      run: docker build . --file Dockerfile.oss --tag docker.pkg.github.com/churchpool/api/nginx-bucket-proxy-${{ steps.vars.outputs.short_ref }}:0.1.$BUILD_NUMBER
 
     - name: Log into registry
       run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login docker.pkg.github.com -u ${{ github.actor }} --password-stdin
 
     - name: Push Docker image to Github package registry
-      run: docker push docker.pkg.github.com/churchpool/nginx-bucket-proxy-${{ steps.vars.outputs.short_ref }}:0.1.$BUILD_NUMBER
+      run: docker push docker.pkg.github.com/churchpool/api/nginx-bucket-proxy-${{ steps.vars.outputs.short_ref }}:0.1.$BUILD_NUMBER
 
     - name: Login to OTC
       run: docker login -u eu-de@${{ secrets.OTC_ACCESS_KEY}} -p ${{ secrets.OTC_LOGIN_KEY}} swr.eu-de.otc.t-systems.com
 
     - name: Tag Docker image
-      run: docker tag docker.pkg.github.com/churchpool/nginx-bucket-proxy-${{ steps.vars.outputs.short_ref }}:0.1.$BUILD_NUMBER swr.eu-de.otc.t-systems.com/churchpool-api/nginx-bucket-proxy-${{ steps.vars.outputs.short_ref }}:0.1.$BUILD_NUMBER
+      run: docker tag docker.pkg.github.com/churchpool/api/nginx-bucket-proxy-${{ steps.vars.outputs.short_ref }}:0.1.$BUILD_NUMBER swr.eu-de.otc.t-systems.com/churchpool-api/nginx-bucket-proxy-${{ steps.vars.outputs.short_ref }}:0.1.$BUILD_NUMBER
 
     - name: Push Docker image to OTC
       run: docker push swr.eu-de.otc.t-systems.com/churchpool-api/nginx-bucket-proxy-${{ steps.vars.outputs.short_ref }}:0.1.$BUILD_NUMBER
