@@ -19,6 +19,7 @@ COPY common/etc /etc
 COPY common/docker-entrypoint.sh /docker-entrypoint.sh
 COPY common/docker-entrypoint.d/00-check-for-required-env.sh /docker-entrypoint.d/00-check-for-required-env.sh
 COPY oss/etc /etc
+COPY data /data
 
 RUN set -eux \
     export DEBIAN_FRONTEND=noninteractive; \
