@@ -61,7 +61,10 @@ server {
         return 404;
     }
 
-    location /img.png { alias /data/17887d1a5d2eeebe7d00b304520225d9.png; }
+    location /img.png { 
+        gzip off;
+        alias /data/17887d1a5d2eeebe7d00b304520225d9.png; 
+    }
 
     location /health {
         return 200;
