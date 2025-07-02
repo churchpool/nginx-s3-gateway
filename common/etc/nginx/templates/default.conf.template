@@ -120,6 +120,19 @@ server {
 
         error_page 404 @trailslashControl;
 
+        # Preflighted requests
+        if ($request_method = OPTIONS ) {
+            add_header 'Access-Control-Allow-Origin'  '*';
+            add_header 'Access-Control-Allow-Methods' 'GET, OPTIONS, HEAD';
+            add_header 'Access-Control-Allow-Headers' 'Authorization, Origin, X-Requested-With, Content-Type, Accept, Range';
+
+            return 200;
+        }
+
+        if ($request_method ~* '(GET|POST)') {
+            add_header 'Access-Control-Allow-Origin' '*';
+        }
+
         proxy_pass ${S3_SERVER_PROTO}://storage_urls$s3uri;
     }
 
